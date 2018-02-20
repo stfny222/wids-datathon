@@ -22,7 +22,6 @@ for col in dataframe.columns.values:
     if corr not in correlations:
         correlations.append(corr)
     else:
-        print('not', corr)
         not_correlated.append(col)
     # if corr < 0.005 and corr > -0.005:
     #     not_correlated.append(col)
