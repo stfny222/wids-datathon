@@ -1,6 +1,6 @@
 import pandas as pd
 from sklearn.model_selection import train_test_split
-import parameter_values_ga
+import feature_selection_ga
 import classifiers
 
 # Load train data into a dataframe
@@ -9,55 +9,45 @@ print('Full train dataframe size:', df_train0.shape)
 
 # Drop columns with null values
 df_train = df_train0.dropna(axis = 1)
-print('Clean train dataframe size:', df_train.shape)
 
-
-# Store correlation values
-correlations = []
 excluded = []
-for col in df_train.columns.values:
-    # Get correlation between every column and the target
-    corr = df_train['is_female'].corr(df_train[col])
-    # Consider only 4 decimals for correlation values
-    corr = float("{0:.4f}".format(corr))
-    # Exclude repeated correlations
-    if corr not in correlations:
-        correlations.append(corr)
-    else:
-        excluded.append(col)
-    # Exclude correlations with values closer to 0
-    # if corr < 0.005 and corr > -0.005:
-    #     excluded.append(col)
-
-# Exclude also the train_id and the target columns
+# Exclude the train_id and the target columns
 excluded.append('train_id')
 excluded.append('is_female')
 
 # Consider is_female as the target
 y = df_train.is_female
 # Consider every column except for the excluded ones as features
-X = df_train.drop(excluded, axis = 1)
-
-# Split data into train and test
-X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=42)
-print('Train and test data shape:')
-print(X_train.shape, X_test.shape)
+df_train = df_train.drop(excluded, axis = 1)
 
 print('--- RUNNING GENETIC ALGORITHM ---')
-POPULATION_SIZE = 8
-MAX_ITER = 20
-MUTATION_PROB = 10
-parameter_values = parameter_values_ga.run(
-    X_train,
-    y_train,
-    X_test,
-    y_test,
+POPULATION_SIZE = 5
+MAX_ITER = 30
+MUTATION_PROB = 1
+final_excluded_indexes = feature_selection_ga.run(
+    df_train,
+    y,
     POPULATION_SIZE,
     MAX_ITER,
     MUTATION_PROB,
 )
 
+# Generate an array containing the final excluded columns
+final_excluded = []
+for index, col in enumerate(df_train.columns.values):
+    # Only exclude the columns which index correspond to a negative value in the excluded_indexes array
+    if final_excluded_indexes[index] == 0:
+        excluded.append(col)
+
+X = df_train.drop(final_excluded, axis = 1)
+
+# Split data into train and test
+X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.33, random_state=42)
+print('Final train and test data shape:')
+print(X_train.shape, X_test.shape)
+
 print('--- RUNNING FINAL CLASSIFIER ---')
+# Use the optimum values found running the parameter_values_ga (ROC: 0.965156618062)
 roc, clf = classifiers.run(
     # data
     X_train,
@@ -65,19 +55,19 @@ roc, clf = classifiers.run(
     X_test,
     y_test,
     # Random Forest parameters
-    parameter_values[0],
-    parameter_values[1],
-    parameter_values[2],
+    15,
+    1,
+    1074,
     # Ada Boost parameters
-    parameter_values[3],
-    parameter_values[4],
-    parameter_values[5],
+    72,
+    0.6746530840498172,
+    2940,
     # Gradient Tree Boosting parameters
-    parameter_values[6],
-    parameter_values[7],
-    parameter_values[8],
-    parameter_values[9],
-    parameter_values[10],
+    1,
+    0.18546035948574746,
+    139,
+    4,
+    9090,
 )
 print('Final ROC: ', roc)
 
@@ -98,4 +88,4 @@ df_test0['is_female'] = predictions
 submit = df_test0[['test_id', 'is_female']]
 # Generate a csv file for submission
 print('Saving submission...')
-submit.to_csv('submit.csv', index=None)
+submit.to_csv('submit2.csv', index=None)
