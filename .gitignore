@@ -103,3 +103,7 @@ ENV/
 # data folders
 resources
 data
+
+# generated data
+submit.csv
+console.txt
